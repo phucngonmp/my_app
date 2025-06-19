@@ -20,15 +20,18 @@ const db = getFirestore(app);
 async function getExampleAndMeaning(word) {
   const response = await ai.models.generateContent({
     model: "gemini-2.0-flash",
-    contents:
-      "You will receive an input which may be a single word or a phrase in English or Japanese. Return a JSON object with:" +
-      '"example": One sentence that naturally uses the input phrase (in English or Japanese).' +
-      '"meaning": The meaning of the full input phrase translated into Vietnamese (NOT THE EXAMPLE).' +
-      '"type": The language of the input phrase ("English" or "Japanese").' +
-      'Only respond with a valid JSON object. Do not add explanations or extra text. Example input:"hello world"; Example output:' +
-      '{"example": "Hello world, how are you?", "meaning": "Xin chào thế giới", "type": "English"}.' +
-      "Let's start with the input: " +
-      word,
+    contents: `You will receive an input which may be a single word or a phrase in English or Japanese. Return a valid JSON object with the following fields:
+              - "example": A natural sentence using the input phrase in its original language.
+              - "meaning": The meaning of the input phrase translated into Vietnamese (not the meaning of the example).
+              - "type": Either "English" or "Japanese" — the language of the input phrase.
+              - "question": A multiple-choice question testing the user's understanding of the input phrase.
+              - "choices": An array of 4 choices (strings). If the input is English, choices should be in Vietnamese. If the input is Japanese, choices should be in English.
+              - "correctIndex": The index (0–3) of the correct answer inside the "choices" array.
+
+              Only respond with a valid JSON object. Do not add explanations, extra text, or formatting.
+
+              Let's start with the input: ${word}
+              `,
   });
   const text = cleanResponseText(response.text);
   try {
@@ -60,7 +63,7 @@ async function saveWordToFirestore(
     type = data.type;
   }
   const now = new Date();
-  await setDoc(doc(db, "vocab", word), {
+  await setDoc(doc(db, "your collection name", word), {
     example,
     meaning,
     createdAt: Timestamp.fromDate(now),

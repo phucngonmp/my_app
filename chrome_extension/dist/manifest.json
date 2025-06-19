@@ -1,7 +1,7 @@
 
 {
   "manifest_version": 3,
-  "name": "Firebase Context Menu",
+  "name": "Add Vocabulary to Firebase",
   "version": "1.0",
   "permissions": [
     "contextMenus",
@@ -14,8 +14,6 @@
   },
   "host_permissions": ["<all_urls>",
     "https://*.firebaseio.com/",
-    "https://*.googleapis.com/"],
-  "action": {
-    "default_popup": "popup.html"  }
+    "https://*.googleapis.com/"]
 }
 
