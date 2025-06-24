@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:my_app/firestore_service.dart';
+import 'package:my_app/service/firestore_service.dart';
 
 class TotalVocabs extends StatefulWidget {
   const TotalVocabs({super.key});
@@ -177,7 +177,7 @@ class _TotalVocabsState extends State<TotalVocabs> with SingleTickerProviderStat
   Widget _buildVocabularyList(ThemeData theme) {
     return Expanded(
       child: StreamBuilder<QuerySnapshot>(
-        stream: _firestoreService.getAllVocabulary(type: isEnglish ? "English" : "Japanese"),
+        stream: _firestoreService.getAllVocabulary(type: isEnglish ? "English" : "Japanese", orderBy: 'createdAt', descending: true),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return _buildLoadingState();

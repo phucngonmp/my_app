@@ -53,10 +53,10 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: '',
-    appId: '',
-    messagingSenderId: '',
-    projectId: '',
-    storageBucket: '',
+    apiKey: 'AIzaSyBdCQ1KC2fGTgj0HFU90conijnmlHSzBd4',
+    appId: '1:231652080577:android:ca846485d87032cf0e8d40',
+    messagingSenderId: '231652080577',
+    projectId: 'vocab-8d1bc',
+    storageBucket: 'vocab-8d1bc.firebasestorage.app',
   );
 }

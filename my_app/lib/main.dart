@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/vocab/total_vocabs.dart';
-import 'vocab/today_vocabs.dart';
+import 'package:my_app/bubble widget/bubble_widget_page.dart';
+import 'package:my_app/bubble%20widget/bubble_widget_overlay.dart';
+import 'package:my_app/vocab/review_vocabs_page.dart';
+import 'package:my_app/vocab/total_vocabs_page.dart';
+import 'vocab/today_vocab_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // initialize Firebase
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
+// This is the overlay entry point - REQUIRED!
+@pragma("vm:entry-point")
+void overlayMain() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(const MaterialApp(
+    home: BubbleWidgetOverlay(),
+    debugShowCheckedModeBanner: false,
+  ));
+}
 
-// Root Widget
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -22,6 +34,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const HomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -43,7 +56,9 @@ class HomePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             buildMenuButton(context, 'Today vocabs', const TodayVocabs()),
-            buildMenuButton(context, 'All vocabs', const TotalVocabs())
+            buildMenuButton(context, 'All vocabs', const TotalVocabs()),
+            buildMenuButton(context, 'Review', const ReviewVocabs()),
+            buildMenuButton(context, "Bubble Widget", const BubbleWidget())
           ],
         ),
       ),

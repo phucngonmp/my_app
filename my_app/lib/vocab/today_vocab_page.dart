@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:my_app/firestore_service.dart';
+import 'package:my_app/service/firestore_service.dart';
 
 class TodayVocabs extends StatefulWidget {
   const TodayVocabs({super.key});
@@ -18,7 +18,7 @@ class _TodayVocabsState extends State<TodayVocabs> {
     super.initState();
     // Initialize stream once to avoid recreating it on every build
     final FirestoreService firestore = FirestoreService();
-    _wordsStream = firestore.getAllVocabulary();
+    _wordsStream = firestore.getTodayWords();
   }
 
   @override
