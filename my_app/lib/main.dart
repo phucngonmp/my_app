@@ -43,8 +43,21 @@ class MyApp extends StatelessWidget {
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  int getYearProgress() {
+    final now = DateTime.now();
+    final startOfYear = DateTime(now.year, 1, 1);
+    final endOfYear = DateTime(now.year + 1, 1, 1);
+
+    final totalDaysInYear = endOfYear.difference(startOfYear).inDays;
+    final daysPassed = now.difference(startOfYear).inDays;
+
+    return ((daysPassed / totalDaysInYear) * 100).round();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final yearProgress = getYearProgress();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Phuc\'s Zone'),
@@ -55,6 +68,51 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Year Progress Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Year Progress',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: yearProgress / 100,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).colorScheme.primary,
+                          ),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '$yearProgress%',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             buildMenuButton(context, 'Today vocabs', const TodayVocabs()),
             buildMenuButton(context, 'All vocabs', const TotalVocabs()),
             buildMenuButton(context, 'Review', const ReviewVocabs()),

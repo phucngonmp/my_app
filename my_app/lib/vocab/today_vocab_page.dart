@@ -10,14 +10,16 @@ class TodayVocabs extends StatefulWidget {
 }
 
 class _TodayVocabsState extends State<TodayVocabs> {
+  int _index = 0;
+  final FirestoreService firestore = FirestoreService();
+  bool _isTodayWord = true;
   final PageController _pageController = PageController();
-  late Stream<QuerySnapshot> _wordsStream;
+  late Stream<List<QueryDocumentSnapshot>> _wordsStream;
+  int _totalWords = 0; // Track total words
 
   @override
   void initState() {
     super.initState();
-    // Initialize stream once to avoid recreating it on every build
-    final FirestoreService firestore = FirestoreService();
     _wordsStream = firestore.getTodayWords();
   }
 
@@ -31,15 +33,15 @@ class _TodayVocabsState extends State<TodayVocabs> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Today Words"),
+        title: Text(_isTodayWord ? "Today Words" : "Review Words"),
         actions: [
           IconButton(
-            onPressed: _refreshData,
-            icon: const Icon(Icons.refresh),
+              onPressed: _switchWordsMode,
+              icon: const Icon(Icons.swap_horiz_rounded)
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<List<QueryDocumentSnapshot>>(
         stream: _wordsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -51,7 +53,7 @@ class _TodayVocabsState extends State<TodayVocabs> {
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}'),
                   ElevatedButton(
-                    onPressed: _refreshData,
+                    onPressed: _switchWordsMode,
                     child: const Text('Retry'),
                   ),
                 ],
@@ -63,20 +65,28 @@ class _TodayVocabsState extends State<TodayVocabs> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.book, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text("No words found."),
+                  const Icon(Icons.book, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(_isTodayWord
+                      ? "No words added today."
+                      : "No words to review."),
                 ],
               ),
             );
           }
 
-          final docs = snapshot.data!.docs;
+          final docs = snapshot.data!;
+          _totalWords = docs.length;
+
+          // Reset index if it's out of bounds
+          if (_index >= _totalWords) {
+            _index = 0;
+          }
 
           return Column(
             children: [
@@ -84,7 +94,7 @@ class _TodayVocabsState extends State<TodayVocabs> {
               Container(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Word ${(_pageController.hasClients ? _pageController.page?.round() ?? 0 : 0) + 1} of ${docs.length}',
+                  'Word ${_index + 1} of ${docs.length}', // Display as 1-based
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -93,31 +103,38 @@ class _TodayVocabsState extends State<TodayVocabs> {
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: docs.length,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _index = index;
+                    });
+                  },
                   itemBuilder: (context, index) {
                     final doc = docs[index];
                     return FlashcardWidget(
                       key: ValueKey(doc.id),
                       document: doc,
-                      onUpdate: _refreshData, // Callback for manual refresh
+                      onUpdate: _switchWordsMode,
                     );
                   },
                 ),
               ),
-              // Navigation buttons
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _previousCard,
-                      child: const Text('Previous'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _nextCard,
-                      child: const Text('Next'),
-                    ),
-                  ],
+              // Navigation buttons with proper spacing
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _index > 0 ? _previousCard : null, // Disable if at first card
+                        child: const Text('Previous'),
+                      ),
+                      ElevatedButton(
+                        onPressed: _index < _totalWords - 1 ? _nextCard : null, // Disable if at last card
+                        child: const Text('Next'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -127,43 +144,51 @@ class _TodayVocabsState extends State<TodayVocabs> {
     );
   }
 
-  void _refreshData() {
+  void _switchWordsMode() {
     setState(() {
-      // Trigger rebuild to refresh stream
-      final FirestoreService firestore = FirestoreService();
-      _wordsStream = firestore.getCollection("vocab").snapshots();
+      _isTodayWord = !_isTodayWord;
+      _index = 0; // Reset to first card when switching modes
+      _wordsStream = _isTodayWord
+          ? firestore.getTodayWords()
+          : firestore.getWordsForReviewStream();
+
+      // Reset PageController to first page
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
   void _previousCard() {
-    if (_pageController.hasClients) {
+    if (_pageController.hasClients && _index > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+      // Note: _index will be updated by onPageChanged callback
     }
   }
 
   void _nextCard() {
-    if (_pageController.hasClients) {
+    if (_pageController.hasClients && _index < _totalWords - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+      // Note: _index will be updated by onPageChanged callback
     }
   }
 }
-
 
 class FlashcardWidget extends StatefulWidget {
   final DocumentSnapshot document;
   final VoidCallback? onUpdate;
 
-  const FlashcardWidget({
-    super.key,
-    required this.document,
-    this.onUpdate,
-  });
+  const FlashcardWidget({super.key, required this.document, this.onUpdate});
 
   @override
   State<FlashcardWidget> createState() => _FlashcardWidgetState();
@@ -184,9 +209,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     final data = widget.document.data() as Map<String, dynamic>?;
 
     if (data == null) {
-      return const Center(
-        child: Text('Invalid word data'),
-      );
+      return const Center(child: Text('Invalid word data'));
     }
 
     return Center(
@@ -273,18 +296,11 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     return const Column(
       key: ValueKey('hint'),
       children: [
-        Icon(
-          Icons.touch_app,
-          size: 40,
-          color: Colors.grey,
-        ),
+        Icon(Icons.touch_app, size: 40, color: Colors.grey),
         SizedBox(height: 8),
         Text(
           "(Tap to reveal)",
-          style: TextStyle(
-            fontSize: 20,
-            color: Colors.grey,
-          ),
+          style: TextStyle(fontSize: 20, color: Colors.grey),
         ),
       ],
     );
@@ -296,4 +312,3 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     });
   }
 }
-

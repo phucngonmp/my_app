@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/service/gemini_service.dart';
-
+import 'package:rxdart/rxdart.dart';
 
 const apiKey = 'AIzaSyD8DwI5G3w0JpmHDxo33qpxA1PZ-3ZeRrs';
 
@@ -24,7 +24,6 @@ class FirestoreService {
   // Getter for the Firestore instance
   FirebaseFirestore get instance => _firestore;
 
-
   static const String vocabCollection = 'vocab';
 
   // Get collection reference (for your existing code compatibility)
@@ -32,8 +31,7 @@ class FirestoreService {
     return _firestore.collection(collectionName);
   }
 
-  // Get real-time updates for vocabulary with optional filters
-  Stream<QuerySnapshot> getAllVocabulary({
+  Stream<List<QueryDocumentSnapshot>> getAllVocabulary({
     int? limit,
     String? orderBy,
     bool descending = false,
@@ -55,37 +53,29 @@ class FirestoreService {
         query = query.limit(limit);
       }
 
-      return query.snapshots();
+      return query.snapshots().map((snapshot) => snapshot.docs);
     } catch (e) {
       // Return empty stream on error
-      return const Stream.empty();
+      return Stream.empty();
     }
   }
 
-  // Get today's words added today or need to review
-  Stream<QuerySnapshot> getTodayWords() {
-    return getWordsCreatedInNDaysAgo(days: 0);
+  // Get today's words added today
+  Stream<List<QueryDocumentSnapshot>> getTodayWords() {
+    return _getWordsCreatedInNDaysAgo(days: 0);
   }
 
-  // Get words that need review (haven't been reviewed recently)
-  Future<List<QueryDocumentSnapshot>> getWordsForReview() async {
-    List<int> days = [0, 1, 2, 3, 4, 5, 6, 7, 14, 30, 90, 180, 365];
-    return await getWordsFromMultipleDays(days);
+  // Get words that need review (from multiple days combined)
+  Stream<List<QueryDocumentSnapshot>> getWordsForReviewStream() {
+    List<int> daysAgo = [0, 1, 2, 3, 7, 14, 30, 90, 180, 365];
+    return _getWordsFromMultipleDaysStream(daysAgo);
   }
 
-  Future<List<QueryDocumentSnapshot>> getWordsFromMultipleDays(List<int> daysAgo, {int? limitPerDay}) async {
-    List<QueryDocumentSnapshot> allDocs = [];
-
-    for (int days in daysAgo) {
-      final snapshot = await getWordsCreatedInNDaysAgo(days: days, limit: limitPerDay).first; // ✅ wait for stream
-      allDocs.addAll(snapshot.docs);
-    }
-
-    return allDocs;
-  }
-
-
-  Stream<QuerySnapshot> getWordsCreatedInNDaysAgo({required int days, int? limit}) {
+  // Helper method to get words from a specific day
+  Stream<List<QueryDocumentSnapshot>> _getWordsCreatedInNDaysAgo({
+    required int days,
+    int? limit,
+  }) {
     final targetDate = DateTime.now().subtract(Duration(days: days));
     final start = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final end = start.add(Duration(days: 1));
@@ -100,14 +90,26 @@ class FirestoreService {
       query = query.limit(limit);
     }
 
-    return query.snapshots();
+    return query.snapshots().map((snapshot) => snapshot.docs);
+  }
+
+  // Helper method to combine words from multiple days
+  Stream<List<QueryDocumentSnapshot>> _getWordsFromMultipleDaysStream(
+      List<int> daysAgo, {
+        int? limitPerDay,
+      }) {
+    List<Stream<List<QueryDocumentSnapshot>>> streams = daysAgo
+        .map((days) => _getWordsCreatedInNDaysAgo(days: days, limit: limitPerDay))
+        .toList();
+
+    return Rx.combineLatest<List<QueryDocumentSnapshot>, List<QueryDocumentSnapshot>>(
+      streams,
+          (allLists) => allLists.expand((docs) => docs).toList(),
+    );
   }
 
 
-  // Add a new word with real-time feedback
-  Future<DocumentReference> addWordToVocab({
-    required String word,
-  }) async {
+  Future<DocumentReference> addWordToVocab({required String word}) async {
     final geminiService = GeminiService();
     final map = await geminiService.generateWordData(word);
     try {
@@ -120,7 +122,7 @@ class FirestoreService {
         'createAt': FieldValue.serverTimestamp(),
         'question': map['question'],
         'correctIndex': map['correctIndex'],
-        'choices' : map['choices']
+        'choices': map['choices'],
       });
 
       return docRef;
@@ -128,16 +130,16 @@ class FirestoreService {
       rethrow;
     }
   }
-
-  // Update word with real-time sync
-  Future<void> updateWord(String wordId, Map<String, dynamic> updates) async {
-    try {
-      updates['updatedAt'] = FieldValue.serverTimestamp();
-      await _firestore.collection(vocabCollection).doc(wordId).update(updates);
-    } catch (e) {
-      rethrow;
+  Future<void> addQuote({required String quote}) async {
+    if (quote.isNotEmpty) {
+      await FirebaseFirestore.instance.collection('quote').add({
+        'quote': quote,
+        'saveAt': FieldValue.serverTimestamp(),
+      });
     }
   }
+
+
 
   // Update word review statistics
   Future<void> updateWordReview(String wordId, bool wasCorrect) async {
@@ -163,8 +165,4 @@ class FirestoreService {
       rethrow;
     }
   }
-
-
-
-
 }

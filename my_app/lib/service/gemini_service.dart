@@ -1,7 +1,7 @@
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'dart:convert';
 
-const apiKey = '';
+const apiKey = 'AIzaSyD8DwI5G3w0JpmHDxo33qpxA1PZ-3ZeRrs';
 
 class GeminiService {
   late final Gemini _gemini;
@@ -24,18 +24,13 @@ class GeminiService {
   // Getter for the Gemini instance
   Gemini get instance => _gemini;
 
-  // Generate content using Gemini
-  Future<String?> generateContent(String prompt) async {
-    try {
-      final response = await _gemini.prompt(parts: [Part.text(prompt)]);
-      return response?.output;
-    } catch (e) {
-      print('Error generating content: $e');
-      return null;
-    }
+
+  Future<String> generateExplanation(String text) async{
+    final prompt = 'giải thích khái niệm:  $text đơn giản và ví dụ';
+    final response = await Gemini.instance.prompt(parts: [Part.text(prompt)]);
+    return response?.output ?? '';
   }
 
-  // Generate example sentence for a word
   Future<Map<String, dynamic>> generateWordData(String word) async {
     final prompt =
         '''
@@ -62,7 +57,7 @@ class GeminiService {
       return json;
     } catch (e) {
       print("Error generating word data: $e");
-      throw Exception("Empty response from Gemini");// or rethrow if you want to crash on failure
+      throw Exception("Empty response from Gemini");
     }
   }
 

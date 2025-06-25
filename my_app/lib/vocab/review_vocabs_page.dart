@@ -10,7 +10,8 @@ class ReviewVocabs extends StatefulWidget {
 }
 
 class _ReviewVocabState extends State<ReviewVocabs> {
-  late Future<List<QueryDocumentSnapshot>> futureAllDocs;
+  final FirestoreService firestoreService = FirestoreService();
+  late Stream<List<QueryDocumentSnapshot>> streamAllDocs;
   List<QueryDocumentSnapshot> allDocs = [];
   int currentQuestionIndex = 0;
   int? selectedAnswerIndex;
@@ -19,12 +20,12 @@ class _ReviewVocabState extends State<ReviewVocabs> {
   int correctAnswers = 0;
   int totalQuestions = 0;
   bool quizCompleted = false;
+  bool isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    final FirestoreService firestoreService = FirestoreService();
-    futureAllDocs = firestoreService.getWordsForReview();
+    streamAllDocs = firestoreService.getWordsForReviewStream();
   }
 
   @override
@@ -41,14 +42,17 @@ class _ReviewVocabState extends State<ReviewVocabs> {
               child: Center(
                 child: Text(
                   '${currentQuestionIndex + 1}/${allDocs.length}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
         ],
       ),
-      body: FutureBuilder(
-        future: futureAllDocs,
+      body: StreamBuilder<List<QueryDocumentSnapshot>>(
+        stream: streamAllDocs,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return _buildErrorWidget(snapshot.error.toString());
@@ -63,10 +67,11 @@ class _ReviewVocabState extends State<ReviewVocabs> {
           }
 
           // Initialize docs only once
-          if (allDocs.isEmpty) {
+          if (!isInitialized) {
             allDocs = snapshot.data!.toList();
             allDocs.shuffle();
             totalQuestions = allDocs.length;
+            isInitialized = true;
           }
 
           if (quizCompleted) {
@@ -89,7 +94,10 @@ class _ReviewVocabState extends State<ReviewVocabs> {
           Text('Error loading questions: $error'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => setState(() {}),
+            onPressed: () => setState(() {
+              isInitialized = false;
+              allDocs.clear();
+            }),
             child: const Text('Retry'),
           ),
         ],
@@ -115,7 +123,8 @@ class _ReviewVocabState extends State<ReviewVocabs> {
     final currentData = currentDoc.data() as Map<String, dynamic>;
 
     // Extract data from Firebase document
-    final questionText = currentData['question'] as String? ?? 'What does this word mean?';
+    final questionText =
+        currentData['question'] as String? ?? 'What does this word mean?';
     final choices = List<String>.from(currentData['choices'] as List? ?? []);
     final correctIndex = currentData['correctIndex'] as int? ?? 0;
     final example = currentData['example'] as String? ?? '';
@@ -221,24 +230,26 @@ class _ReviewVocabState extends State<ReviewVocabs> {
 
           // Action buttons
           if (showResult) ...[
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _nextQuestion,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: Text(
-                      currentQuestionIndex == allDocs.length - 1 ? 'Finish' : 'Next',
+            Container(
+              margin: const EdgeInsets.only(bottom: 80.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _nextQuestion,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: Text(
+                        currentQuestionIndex == allDocs.length - 1 ? 'Finish' : 'Next',
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            )
           ],
         ],
       ),
@@ -276,7 +287,9 @@ class _ReviewVocabState extends State<ReviewVocabs> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
-              color: backgroundColor != null ? Colors.transparent : Colors.grey.shade300,
+              color: backgroundColor != null
+                  ? Colors.transparent
+                  : Colors.grey.shade300,
             ),
           ),
           elevation: showResult ? 0 : 2,
@@ -287,28 +300,24 @@ class _ReviewVocabState extends State<ReviewVocabs> {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: backgroundColor?.withOpacity(0.3) ?? Colors.grey.shade200,
+                color:
+                    backgroundColor?.withOpacity(0.3) ?? Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Center(
                 child: icon != null
                     ? Icon(icon, size: 20, color: textColor)
                     : Text(
-                  String.fromCharCode(65 + index), // A, B, C, D
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: textColor ?? Colors.grey.shade600,
-                  ),
-                ),
+                        String.fromCharCode(65 + index), // A, B, C, D
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: textColor ?? Colors.grey.shade600,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                option,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
+            Expanded(child: Text(option, style: const TextStyle(fontSize: 16))),
           ],
         ),
       ),
@@ -371,7 +380,10 @@ class _ReviewVocabState extends State<ReviewVocabs> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
               ),
               child: const Text('Review Again', style: TextStyle(fontSize: 18)),
             ),
@@ -412,14 +424,6 @@ class _ReviewVocabState extends State<ReviewVocabs> {
     }
   }
 
-  void _retryQuestion() {
-    setState(() {
-      selectedAnswerIndex = null;
-      showResult = false;
-      isCorrect = false;
-    });
-  }
-
   void _restartQuiz() {
     setState(() {
       currentQuestionIndex = 0;
@@ -428,7 +432,8 @@ class _ReviewVocabState extends State<ReviewVocabs> {
       isCorrect = false;
       correctAnswers = 0;
       quizCompleted = false;
-      allDocs.shuffle(); // Shuffle for variety
+      isInitialized = false;
+      allDocs.clear();
     });
   }
 }

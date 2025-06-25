@@ -46,7 +46,7 @@ class _BubbleWidgetPageState extends State<BubbleWidgetPage>{
       final result = await FlutterOverlayWindow.requestPermission();
       if (result != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Permission granted! You can now show the chat head.')),
+          SnackBar(content: Text('Permission granted! You can now show the bubble widget.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +84,7 @@ class _BubbleWidgetPageState extends State<BubbleWidgetPage>{
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Chat head is now active! Go to another app to see it.')),
+      SnackBar(content: Text('Bubble widget is now active! Go to another app to see it.')),
     );
   }
 
@@ -106,7 +106,7 @@ class _BubbleWidgetPageState extends State<BubbleWidgetPage>{
             Icon(
               Icons.chat_bubble,
               size: 80,
-              color: Colors.blue,
+              color: Colors.deepPurple,
             ),
             SizedBox(height: 20),
             Text(
@@ -142,10 +142,10 @@ class _BubbleWidgetPageState extends State<BubbleWidgetPage>{
               child: ElevatedButton.icon(
                 onPressed: isOverlayActive ? null : _showBubbleOverlay,
                 icon: Icon(Icons.chat),
-                label: Text(isOverlayActive ? "Chat Head Active" : "Show Chat Head"),
+                label: Text(isOverlayActive ? "Bubble Widget Active" : "Show Bubble Widget"),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 15),
-                  backgroundColor: isOverlayActive ? Colors.grey : Colors.blue,
+                  backgroundColor: isOverlayActive ? Colors.grey : Colors.deepPurple[200],
                 ),
               ),
             ),
@@ -158,7 +158,7 @@ class _BubbleWidgetPageState extends State<BubbleWidgetPage>{
               child: ElevatedButton.icon(
                 onPressed: isOverlayActive ? _closeBubbleOverlay : null,
                 icon: Icon(Icons.close),
-                label: Text("Close Chat Head"),
+                label: Text("Close Bubble Widget"),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 15),
                   backgroundColor: isOverlayActive ? Colors.red : Colors.grey,

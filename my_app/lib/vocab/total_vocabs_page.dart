@@ -176,22 +176,14 @@ class _TotalVocabsState extends State<TotalVocabs> with SingleTickerProviderStat
 
   Widget _buildVocabularyList(ThemeData theme) {
     return Expanded(
-      child: StreamBuilder<QuerySnapshot>(
+      child: StreamBuilder<List<QueryDocumentSnapshot>>(
         stream: _firestoreService.getAllVocabulary(type: isEnglish ? "English" : "Japanese", orderBy: 'createdAt', descending: true),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingState();
-          }
-
-          if (snapshot.hasError) {
-            return _buildErrorState(theme, snapshot.error.toString());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return _buildEmptyState(theme);
           }
 
-          final docs = snapshot.data!.docs;
+          final docs = snapshot.data!;
           return _buildWordsList(docs, theme);
         },
       ),
