@@ -59,7 +59,7 @@ class _BubbleWidgetOverlayState extends State<BubbleWidgetOverlay> {
   void _sendQuoteToFirebase() {
     String text = _textController.text;
     if (text.isNotEmpty) {
-      _firestoreService.addQuote(quote: text);
+      _firestoreService.addToGoodStuff(content: text);
       _textController.clear();
     }
   }
@@ -306,7 +306,7 @@ class _BubbleWidgetOverlayState extends State<BubbleWidgetOverlay> {
                     )),
                     SizedBox(width: 8),
                     Expanded(child: _buildActionButton(
-                      'Quote',
+                      'Good Stuff',
                       Icons.format_quote_rounded,
                       Colors.orange,
                       _sendQuoteToFirebase,

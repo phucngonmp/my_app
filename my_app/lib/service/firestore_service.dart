@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:my_app/exercise/exercise_model.dart';
 import 'package:my_app/service/gemini_service.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -108,21 +109,23 @@ class FirestoreService {
     );
   }
 
-
+  Future<void> addToGoodStuff({required String content}) async {
+    if (content.isNotEmpty) {
+      await FirebaseFirestore.instance.collection('good_stuff').add({
+        'content': content,
+        'saveAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
   Future<DocumentReference> addWordToVocab({required String word}) async {
     final geminiService = GeminiService();
     final map = await geminiService.generateWordData(word);
     try {
       final docRef = _firestore.collection(vocabCollection).doc(word);
-
+      List<dynamic> jsonList = map['exercises'];
+      List<Exercise> exercises = jsonList.map((e) => Exercise.fromJson(e)).toList();
       await docRef.set({
-        'meaning': map['meaning'],
-        'example': map['example'] ?? '',
-        'type': map['type'],
-        'createAt': FieldValue.serverTimestamp(),
-        'question': map['question'],
-        'correctIndex': map['correctIndex'],
-        'choices': map['choices'],
+        'exercises' : exercises
       });
 
       return docRef;
@@ -130,39 +133,129 @@ class FirestoreService {
       rethrow;
     }
   }
-  Future<void> addQuote({required String quote}) async {
-    if (quote.isNotEmpty) {
-      await FirebaseFirestore.instance.collection('quote').add({
-        'quote': quote,
-        'saveAt': FieldValue.serverTimestamp(),
+
+  Future<void> updateFeedback({required String docId, required int feedback}) async{
+    final docRef = _firestore.collection('workout').doc(docId);
+    final docSnapshot = await docRef.get();
+    if(docSnapshot.exists){
+      await docRef.update({'feedback' : feedback});
+    }
+  }
+
+  Future<void> updateSetCompleted({
+    required String docId,
+    required int exerciseIndex,
+  }) async {
+    final docRef = _firestore.collection('workout').doc(docId);
+
+    final docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      final exercises = List<Map<String, dynamic>>.from(data['exercises']);
+
+      final current = exercises[exerciseIndex]['setsCompleted'] ?? 0;
+      final totalSets = exercises[exerciseIndex]['sets'] ?? 0;
+
+      if (current < totalSets) {
+        exercises[exerciseIndex]['setsCompleted'] = current + 1;
+      }
+      await docRef.update({
+        'exercises': exercises,
       });
     }
   }
 
 
-
-  // Update word review statistics
-  Future<void> updateWordReview(String wordId, bool wasCorrect) async {
+  Future<DocumentReference> addExercisesOfDate({required DateTime date}) async {
+    final geminiService = GeminiService();
+    final map = await geminiService.generateWorkOutList(date: date);
+    final docId = convertToWorkoutDocId(date: date);
     try {
-      final docRef = _firestore.collection(vocabCollection).doc(wordId);
+      final docRef = _firestore.collection('workout').doc(docId);
 
-      await _firestore.runTransaction((transaction) async {
-        final snapshot = await transaction.get(docRef);
-        if (!snapshot.exists) return;
-
-        final data = snapshot.data() as Map<String, dynamic>;
-        final reviewCount = (data['reviewCount'] ?? 0) + 1;
-        final correctCount = (data['correctCount'] ?? 0) + (wasCorrect ? 1 : 0);
-
-        transaction.update(docRef, {
-          'reviewCount': reviewCount,
-          'correctCount': correctCount,
-          'lastReviewed': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+      await docRef.set({
+        'exercises': map['exercises'],
+        'feedback': map['feedback']
       });
+
+      return docRef;
     } catch (e) {
       rethrow;
     }
+  }
+  Future<List<Exercise>> getNotDoneExercisesOfDate({required DateTime date}) async {
+    final docId = convertToWorkoutDocId(date: date);
+
+    final docSnapshot = await _firestore.collection('workout').doc(docId).get();
+
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      final exercisesJson = data['exercises'] as List<dynamic>;
+
+      return exercisesJson
+          .map((json) => Exercise.fromJson(json as Map<String, dynamic>))
+          .where((exercise) => exercise.setsCompleted < exercise.sets)
+          .toList();
+    }
+    return [];
+  }
+  
+
+  Future<List<Exercise>> getExercisesOfDate({required DateTime date}) async {
+    final docId = convertToWorkoutDocId(date: date);
+
+    final docSnapshot = await _firestore.collection('workout').doc(docId).get();
+
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      final exercisesJson = data['exercises'] as List<dynamic>;
+
+      return exercisesJson
+          .map((json) => Exercise.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+
+  Future<String> getPreviousDataOfWorkOut({required DateTime date}) async{
+    final previousDocId = convertToWorkoutDocId(date: date.subtract(Duration(days: 7)));
+
+    DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+        .collection('workout')
+        .doc(previousDocId)
+        .get();
+
+    if(docSnapshot.exists){
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      print("here");
+      final exercises = data['exercises'] as List<dynamic>;
+      final feedback = data['feedback'];
+      // Convert each exercise map into a formatted string
+      List<String> formattedList = exercises.map((exercise) {
+        final name = exercise['name'];
+        final sets = exercise['sets'];
+        final setsCompleted = exercise['setsCompleted'];
+
+
+        final reps = exercise['reps'];
+        final seconds = exercise['seconds'];
+
+        final details = (reps == null)
+            ? '${seconds.toString()} seconds'
+            : '${reps.toString()} reps';
+
+        return '$name: $sets sets x $details [done: $setsCompleted/$sets]';
+      }).toList();
+      return formattedList.join('\n') + '| feedback: ${feedback}';
+    }
+    return "No data";
+  }
+
+  String convertToWorkoutDocId({required DateTime date}){
+    String dateString = '${date.day.toString().padLeft(2, '0')}'
+        '${date.month.toString().padLeft(2, '0')}'
+        '${date.year}';
+    return dateString;
   }
 }

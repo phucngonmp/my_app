@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/bubble widget/bubble_widget_page.dart';
 import 'package:my_app/bubble%20widget/bubble_widget_overlay.dart';
+import 'package:my_app/exercise/list_exercises_page.dart';
 import 'package:my_app/vocab/review_vocabs_page.dart';
 import 'package:my_app/vocab/total_vocabs_page.dart';
 import 'vocab/today_vocab_page.dart';
@@ -43,7 +44,7 @@ class MyApp extends StatelessWidget {
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  int getYearProgress() {
+  double getYearProgress() {
     final now = DateTime.now();
     final startOfYear = DateTime(now.year, 1, 1);
     final endOfYear = DateTime(now.year + 1, 1, 1);
@@ -51,8 +52,10 @@ class HomePage extends StatelessWidget {
     final totalDaysInYear = endOfYear.difference(startOfYear).inDays;
     final daysPassed = now.difference(startOfYear).inDays;
 
-    return ((daysPassed / totalDaysInYear) * 100).round();
+    final progress = (daysPassed / totalDaysInYear) * 100;
+    return double.parse(progress.toStringAsFixed(1));
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +83,7 @@ class HomePage extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    'Year Progress',
+                    DateTime.now().year.toString() + " Progress",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -116,7 +119,8 @@ class HomePage extends StatelessWidget {
             buildMenuButton(context, 'Today vocabs', const TodayVocabs()),
             buildMenuButton(context, 'All vocabs', const TotalVocabs()),
             buildMenuButton(context, 'Review', const ReviewVocabs()),
-            buildMenuButton(context, "Bubble Widget", const BubbleWidget())
+            buildMenuButton(context, "Bubble Widget", const BubbleWidget()),
+            buildMenuButton(context, "Exercise zone", const ListExercisesPage()),
           ],
         ),
       ),
