@@ -3,16 +3,17 @@ import { getFirestore, doc, setDoc, Timestamp } from "firebase/firestore";
 import { GoogleGenAI } from "@google/genai";
 
 const firebaseConfig = {
-  apiKey: "your firebase config",
-  authDomain: "your firebase config",
-  projectId: "your firebase config",
-  storageBucket: "your firebase config",
-  messagingSenderId: "your firebase config",
-  appId: "your firebase config",
+  apiKey: "AIzaSyCMGGBZDduOwQzNpPdgIZibcCB4AFPDluA",
+  authDomain: "superfoo-3f973.firebaseapp.com",
+  projectId: "superfoo-3f973",
+  storageBucket: "superfoo-3f973.firebasestorage.app",
+  messagingSenderId: "1035666447284",
+  appId: "1:1035666447284:web:f06ba6df6da1f46a79f0e1",
+  measurementId: "G-JM4SNNRVKW",
 };
 
 const ai = new GoogleGenAI({
-  apiKey: "your gemini api key",
+  apiKey: "AIzaSyD8DwI5G3w0JpmHDxo33qpxA1PZ-3ZeRrs",
 });
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -56,20 +57,33 @@ async function saveWordToFirestore(
   meaning = "",
   type = "English"
 ) {
-  const data = await getExampleAndMeaning(word);
-  if (data && data.example && data.meaning && data.type) {
-    example = data.example;
-    meaning = data.meaning;
-    type = data.type;
+  try {
+    const data = await getExampleAndMeaning(word);
+    let question, choices, correctIndex;
+
+    if (data && data.example && data.meaning && data.type) {
+      example = data.example;
+      meaning = data.meaning;
+      type = data.type;
+      question = data.question;
+      choices = data.choices;
+      correctIndex = data.correctIndex;
+    }
+
+    const now = new Date();
+    await setDoc(doc(db, "vocab", word), {
+      example,
+      meaning,
+      createdAt: Timestamp.fromDate(now),
+      type,
+      question,
+      choices,
+      correctIndex,
+    });
+    console.log(`Saved '${word}'`);
+  } catch (error) {
+    console.error("Failed to save word:", error.message);
   }
-  const now = new Date();
-  await setDoc(doc(db, "your collection name", word), {
-    example,
-    meaning,
-    createdAt: Timestamp.fromDate(now),
-    type,
-  });
-  console.log(`Saved '${word}'`);
 }
 
 chrome.runtime.onInstalled.addListener(() => {

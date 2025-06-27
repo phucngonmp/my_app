@@ -12,7 +12,9 @@
   "type": "commonjs",
   "dependencies": {
     "@google/genai": "^1.5.1",
-    "firebase": "^11.9.1",
-    "vite": "^6.3.5"
+    "firebase": "^11.9.1"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
   }
 }
