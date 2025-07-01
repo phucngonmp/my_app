@@ -122,10 +122,14 @@ class FirestoreService {
     final map = await geminiService.generateWordData(word);
     try {
       final docRef = _firestore.collection(vocabCollection).doc(word);
-      List<dynamic> jsonList = map['exercises'];
-      List<Exercise> exercises = jsonList.map((e) => Exercise.fromJson(e)).toList();
       await docRef.set({
-        'exercises' : exercises
+        'meaning': map['meaning'],
+        'example': map['example'] ?? '',
+        'type': map['type'],
+        'createdAt': FieldValue.serverTimestamp(),
+        'question': map['question'],
+        'correctIndex': map['correctIndex'],
+        'choices': map['choices'],
       });
 
       return docRef;

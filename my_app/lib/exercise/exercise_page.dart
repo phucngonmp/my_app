@@ -41,7 +41,7 @@ class _ExercisePageState extends State<ExercisePage> {
       // Check if all sets are completed for current exercise
       if (_currentSet >= _notDoneExercises[_currentExerciseIndex].sets) {
         // Move to next exercise
-        if (widget.indexOnFirebase < _notDoneExercises.length - 1) {
+        if (_currentExerciseIndex < _notDoneExercises.length - 1) {
           _indexOnFirebase++;
           _currentSet = 1;
           _currentExerciseIndex++;
@@ -301,7 +301,7 @@ class _ExercisePageState extends State<ExercisePage> {
             child: Column(
               children: [
                 Text(
-                  'Exercise ${_currentExerciseIndex + 1} of ${_notDoneExercises.length + _currentExerciseIndex}',
+                  'Exercise ${_currentExerciseIndex + 1} of ${_notDoneExercises.length + 1}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

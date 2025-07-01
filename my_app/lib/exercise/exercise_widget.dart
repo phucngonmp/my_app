@@ -93,25 +93,7 @@ class _ExerciseWidgetState extends State<ExerciseWidget> {
       docId: widget.docId,
       exerciseIndex: widget.exerciseIndexOnFirebase,
     );
-    _startRestTimer();
     widget.onCompleted();
-  }
-
-  void _startRestTimer() {
-    setState(() {
-      _remainingSeconds = 30; // 30 second rest
-    });
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_remainingSeconds > 0) {
-          _remainingSeconds--;
-        } else {
-          _timer?.cancel();
-          widget.onCompleted();
-        }
-      });
-    });
   }
 
   void _markAsDone() {

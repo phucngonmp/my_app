@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app/bubble widget/bubble_widget_page.dart';
 import 'package:my_app/bubble%20widget/bubble_widget_overlay.dart';
